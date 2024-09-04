@@ -68,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     initializeDragEvents(item);
+    initializeTouchEvents(item);
 
     // حفظ العناصر في localStorage
     updateLocalStorage();
@@ -122,6 +123,55 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function initializeTouchEvents(item) {
+    item.addEventListener("touchstart", (e) => {
+      item.style.opacity = "0.5";
+      const touch = e.touches[0];
+      const offsetX = touch.clientX - item.getBoundingClientRect().left;
+      const offsetY = touch.clientY - item.getBoundingClientRect().top;
+
+      function moveAt(touch) {
+        item.style.position = "absolute";
+        item.style.zIndex = "1000";
+        item.style.left = touch.clientX - offsetX + "px";
+        item.style.top = touch.clientY - offsetY + "px";
+      }
+
+      const touchMoveHandler = (e) => {
+        moveAt(e.touches[0]);
+      };
+
+      document.addEventListener("touchmove", touchMoveHandler);
+
+      item.addEventListener("touchend", () => {
+        item.style.opacity = "1";
+        document.removeEventListener("touchmove", touchMoveHandler);
+
+        let droppedInBox = null;
+        boxes.forEach((box) => {
+          const boxRect = box.getBoundingClientRect();
+          if (
+            touch.clientX >= boxRect.left &&
+            touch.clientX <= boxRect.right &&
+            touch.clientY >= boxRect.top &&
+            touch.clientY <= boxRect.bottom
+          ) {
+            droppedInBox = box;
+          }
+        });
+
+        if (droppedInBox) {
+          const container = droppedInBox.querySelector(".container");
+          container.appendChild(item);
+          updateLocalStorage();
+        } else {
+          item.style.position = "";
+          item.style.zIndex = "";
+        }
+      });
+    });
+  }
+
   function updateLocalStorage() {
     const allItems = [];
     boxes.forEach((box, boxIndex) => {
@@ -158,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
         inputTitle.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
             saveChanges();
-            e.preventDefault(); // منع التصرف الافتراضي عند الضغط على Enter
+            e.preventDefault();
           }
         });
 

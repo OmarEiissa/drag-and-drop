@@ -131,6 +131,10 @@ h2 {
   background-color: #7463ff;
 }
 
+.box h2 img {
+  width: 20px;
+}
+
 .item:active {
   transform: scale(0.9);
 }
