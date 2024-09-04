@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function loadItems() {
     const allItems = JSON.parse(localStorage.getItem("items")) || [];
     allItems.forEach((item) => {
-      addItem(item.text, item.boxIndex, false); // false تعني عدم إضافة عنصر جديد، بل تحديث الموقع
+      addItem(item.text, item.boxIndex, false);
     });
   }
 
@@ -37,35 +37,50 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  inp.addEventListener("input", () => {
+    if (inp.value !== "") {
+      btn.classList.add("active");
+      btn.style.backgroundColor = "#7463ff";
+    } else {
+      btn.classList.remove("active");
+      btn.style.backgroundColor = "";
+    }
+  });
+
   function addItemIfValid() {
     const value = inp.value.trim();
     if (value !== "") {
-      addItem(value, 0, true); // true تعني إضافة عنصر جديد
+      addItem(value, 0, true);
       inp.value = "";
+      btn.classList.remove("active"); // إعادة تعيين الزر بعد الإضافة
     }
   }
 
   function addItem(text, boxIndex, isNew) {
-    const item = document.createElement("p");
-    item.textContent = text;
-    item.className = "item";
-    item.draggable = true;
+    const item = document.createElement("div");
+    item.className = "item-container";
 
-    // افترضنا أن العنصر يضاف إلى الصندوق بناءً على boxIndex
+    const itemText = document.createElement("p");
+    itemText.textContent = text;
+    itemText.className = "item";
+    itemText.draggable = true;
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.innerHTML = "🗑️";
+
+    deleteBtn.addEventListener("click", () => {
+      item.remove();
+      updateLocalStorage();
+    });
+
+    item.appendChild(itemText);
+    item.appendChild(deleteBtn);
+
     const targetBox = boxes[boxIndex];
     const container = targetBox.querySelector(".container");
 
-    if (isNew) {
-      container.insertBefore(item, container.firstChild);
-    } else {
-      const existingItem = Array.from(container.querySelectorAll(".item")).find(
-        (i) => i.textContent === text
-      );
-      if (existingItem) {
-        existingItem.remove();
-      }
-      container.insertBefore(item, container.firstChild);
-    }
+    container.appendChild(item);
 
     initializeDragEvents(item);
     initializeTouchEvents(item);
@@ -105,16 +120,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       box.addEventListener("drop", () => {
         if (drag) {
-          const oldBoxIndex = Array.from(boxes).findIndex((b) =>
-            b.contains(drag)
-          );
           container.appendChild(drag);
           box.style.backgroundColor = "#fff";
           input.style.backgroundColor = "#fff";
           box.style.color = "#000";
 
           // تحديث لون العنصر بناءً على الصندوق الذي تم إسقاطه فيه
-          drag.style.backgroundColor = box.getAttribute("data-bg-color");
+          drag.querySelector("p").style.backgroundColor =
+            box.getAttribute("data-bg-color");
 
           // تحديث موقع العنصر في localStorage
           updateLocalStorage();
@@ -124,51 +137,105 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function initializeTouchEvents(item) {
+    let initialX,
+      initialY,
+      drag = null;
+    let clone;
+
     item.addEventListener("touchstart", (e) => {
-      item.style.opacity = "0.5";
+      e.preventDefault();
+      drag = item;
+      drag.style.opacity = "0.5";
+
       const touch = e.touches[0];
-      const offsetX = touch.clientX - item.getBoundingClientRect().left;
-      const offsetY = touch.clientY - item.getBoundingClientRect().top;
+      const rect = item.getBoundingClientRect();
+      initialX = touch.clientX - rect.left;
+      initialY = touch.clientY - rect.top;
 
-      function moveAt(touch) {
-        item.style.position = "absolute";
-        item.style.zIndex = "1000";
-        item.style.left = touch.clientX - offsetX + "px";
-        item.style.top = touch.clientY - offsetY + "px";
-      }
+      // إنشاء نسخة عائمة من العنصر المسحوب
+      clone = item.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.width = `${rect.width - 5}px`;
+      clone.style.height = `${rect.height - 5}px`;
+      clone.style.transform = "scale(0.9)";
+      clone.style.left = `${rect.left}px`;
+      clone.style.top = `${rect.top}px`;
+      clone.style.pointerEvents = "none";
+      clone.style.opacity = "0.7";
+      clone.style.zIndex = "1000";
+      clone.style.backgroundColor =
+        window.getComputedStyle(item).backgroundColor;
+      document.body.appendChild(clone);
+    });
 
-      const touchMoveHandler = (e) => {
-        moveAt(e.touches[0]);
-      };
+    item.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      if (!drag || !clone) return;
+      const touch = e.touches[0];
 
-      document.addEventListener("touchmove", touchMoveHandler);
+      clone.style.left = `${touch.clientX - initialX}px`;
+      clone.style.top = `${touch.clientY - initialY}px`;
 
-      item.addEventListener("touchend", () => {
-        item.style.opacity = "1";
-        document.removeEventListener("touchmove", touchMoveHandler);
-
-        let droppedInBox = null;
-        boxes.forEach((box) => {
-          const boxRect = box.getBoundingClientRect();
-          if (
-            touch.clientX >= boxRect.left &&
-            touch.clientX <= boxRect.right &&
-            touch.clientY >= boxRect.top &&
-            touch.clientY <= boxRect.bottom
-          ) {
-            droppedInBox = box;
-          }
-        });
-
-        if (droppedInBox) {
-          const container = droppedInBox.querySelector(".container");
-          container.appendChild(item);
-          updateLocalStorage();
+      // التحقق من مرور العنصر فوق صندوق آخر
+      boxes.forEach((box) => {
+        const boxRect = box.getBoundingClientRect();
+        if (
+          touch.clientX >= boxRect.left &&
+          touch.clientX <= boxRect.right &&
+          touch.clientY >= boxRect.top &&
+          touch.clientY <= boxRect.bottom
+        ) {
+          box.style.backgroundColor = box.getAttribute("data-bg-color");
+          box.querySelector("input").style.backgroundColor =
+            box.getAttribute("data-bg-color");
+          box.style.color = "#fff";
         } else {
-          item.style.position = "";
-          item.style.zIndex = "";
+          box.style.backgroundColor = "#fff";
+          box.querySelector("input").style.backgroundColor = "#fff";
+          box.style.color = "#000";
         }
       });
+    });
+
+    item.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      if (!drag || !clone) return;
+      clone.remove();
+      drag.style.opacity = "1";
+
+      const touch = e.changedTouches[0];
+      let droppedInBox = null;
+
+      boxes.forEach((box) => {
+        const boxRect = box.getBoundingClientRect();
+        if (
+          touch.clientX >= boxRect.left &&
+          touch.clientX <= boxRect.right &&
+          touch.clientY >= boxRect.top &&
+          touch.clientY <= boxRect.bottom
+        ) {
+          droppedInBox = box;
+        }
+
+        // إعادة تعيين ألوان الصناديق
+        box.style.backgroundColor = "#fff";
+        box.querySelector("input").style.backgroundColor = "#fff";
+        box.style.color = "#000";
+      });
+
+      if (droppedInBox) {
+        const container = droppedInBox.querySelector(".container");
+        container.appendChild(drag);
+
+        // تحديث لون العنصر بناءً على الصندوق الذي تم إسقاطه فيه
+        drag.style.backgroundColor = droppedInBox.getAttribute("data-bg-color");
+
+        // تحديث موقع العنصر في localStorage
+        updateLocalStorage();
+      }
+
+      drag = null;
+      clone = null;
     });
   }
 
@@ -176,6 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const allItems = [];
     boxes.forEach((box, boxIndex) => {
       const container = box.querySelector(".container");
+      // الحصول على جميع العناصر بما في ذلك النصوص المكررة
       container.querySelectorAll(".item").forEach((item) => {
         allItems.push({ text: item.textContent, boxIndex });
       });
