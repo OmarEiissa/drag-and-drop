@@ -28,6 +28,7 @@ body {
   flex-direction: column;
   gap: 50px;
   padding-top: 70px;
+  
 }
 
 .inputs {
@@ -120,6 +121,7 @@ h2 {
   text-align: center;
   width: 100%;
   max-width: calc(100% - 32px);
+  outline: none;
 }
 
 .box1 .item {
@@ -150,14 +152,21 @@ h2 {
   display: flex;
 } */
 
-.active {
-  background-color: red;
+.edit-item-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 10px;
+  transition: color 0.3s;
 }
+
+
 .delete-btn {
   background: none;
   border: none;
   cursor: pointer;
-  margin-left: 5px;
+  margin-right: 10px;
   transition: color 0.3s;
 }
 
@@ -227,18 +236,4 @@ h2 {
 
 .item-container {
   display: flex;
-}
-
-.delete-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  color: red;
-  margin-left: 10px;
-  transition: color 0.3s;
-}
-
-.delete-btn:hover {
-  color: darkred;
 }

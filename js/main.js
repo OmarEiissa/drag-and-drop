@@ -65,6 +65,10 @@ document.addEventListener("DOMContentLoaded", () => {
     itemText.className = "item";
     itemText.draggable = true;
 
+    const editBtn = document.createElement("button");
+    editBtn.className = "edit-item-btn";
+    editBtn.innerHTML = "✏️";
+
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "delete-btn";
     deleteBtn.innerHTML = "🗑️";
@@ -74,8 +78,9 @@ document.addEventListener("DOMContentLoaded", () => {
       updateLocalStorage();
     });
 
-    item.appendChild(itemText);
     item.appendChild(deleteBtn);
+    item.appendChild(itemText);
+    item.appendChild(editBtn);
 
     const targetBox = boxes[boxIndex];
     const container = targetBox.querySelector(".container");
@@ -84,9 +89,53 @@ document.addEventListener("DOMContentLoaded", () => {
 
     initializeDragEvents(item);
     initializeTouchEvents(item);
+    initializeItemEditEvents(item);
 
     // حفظ العناصر في localStorage
     updateLocalStorage();
+  }
+
+  function initializeItemEditEvents(item) {
+    const editButton = item.querySelector(".edit-item-btn");
+    const itemText = item.querySelector(".item");
+
+    const saveChanges = () => {
+      itemText.removeAttribute("contenteditable");
+      editButton.textContent = "✏️";
+      updateLocalStorage();
+      document.removeEventListener("click", handleClickOutside);
+    };
+
+    const handleClickOutside = (e) => {
+      if (
+        !item.contains(e.target) &&
+        itemText.hasAttribute("contenteditable")
+      ) {
+        saveChanges();
+      }
+    };
+
+    editButton.addEventListener("click", () => {
+      if (itemText.hasAttribute("contenteditable")) {
+        saveChanges();
+      } else {
+        itemText.setAttribute("contenteditable", "true");
+        itemText.style.cursor = "auto";
+        itemText.focus();
+        editButton.textContent = "👍";
+        document.addEventListener("click", handleClickOutside);
+      }
+    });
+
+    itemText.addEventListener(
+      "blur",
+      () => {
+        if (itemText.hasAttribute("contenteditable")) {
+          saveChanges();
+        }
+      },
+      { once: true }
+    );
   }
 
   function initializeDragEvents(item) {
@@ -137,42 +186,64 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function initializeTouchEvents(item) {
-    let initialX,
-      initialY,
-      drag = null;
+    let initialX, initialY;
+    let drag = null;
     let clone;
+    let isDragging = false;
 
     item.addEventListener("touchstart", (e) => {
       e.preventDefault();
-      drag = item;
-      drag.style.opacity = "0.5";
-
       const touch = e.touches[0];
       const rect = item.getBoundingClientRect();
       initialX = touch.clientX - rect.left;
       initialY = touch.clientY - rect.top;
 
+      // التحقق من الضغط على أزرار التعديل أو الحذف
+      const target = e.target;
+      if (
+        target.classList.contains("edit-item-btn") ||
+        target.classList.contains("delete-btn")
+      ) {
+        isDragging = false; // لا تسحب إذا كانت النقرة على أزرار التعديل أو الحذف
+        // التعامل مع زر التعديل
+        if (target.classList.contains("edit-item-btn")) {
+          initializeItemEditEvents(item);
+        }
+        // التعامل مع زر الحذف
+        if (target.classList.contains("delete-btn")) {
+          item.remove();
+          updateLocalStorage();
+        }
+        return;
+      }
+
+      drag = item;
+      drag.style.opacity = "0.5";
+
       // إنشاء نسخة عائمة من العنصر المسحوب
       clone = item.cloneNode(true);
       clone.style.position = "absolute";
-      clone.style.width = `${rect.width - 5}px`;
-      clone.style.height = `${rect.height - 5}px`;
+      clone.style.width = `${item.offsetWidth - 5}px`;
+      clone.style.height = `${item.offsetHeight - 5}px`;
       clone.style.transform = "scale(0.9)";
-      clone.style.left = `${rect.left}px`;
-      clone.style.top = `${rect.top}px`;
+      clone.style.left = `${e.clientX - initialX}px`;
+      clone.style.top = `${e.clientY - initialY}px`;
       clone.style.pointerEvents = "none";
       clone.style.opacity = "0.7";
       clone.style.zIndex = "1000";
       clone.style.backgroundColor =
         window.getComputedStyle(item).backgroundColor;
       document.body.appendChild(clone);
+
+      isDragging = true; // تعيين حالة السحب
     });
 
     item.addEventListener("touchmove", (e) => {
       e.preventDefault();
-      if (!drag || !clone) return;
+      if (!drag || !clone || !isDragging) return;
       const touch = e.touches[0];
 
+      // تحديث موقع النسخة العائمة
       clone.style.left = `${touch.clientX - initialX}px`;
       clone.style.top = `${touch.clientY - initialY}px`;
 
@@ -200,6 +271,8 @@ document.addEventListener("DOMContentLoaded", () => {
     item.addEventListener("touchend", (e) => {
       e.preventDefault();
       if (!drag || !clone) return;
+      if (!isDragging) return; // لا تقم بالتحريك إذا لم يكن العنصر يتم سحبه
+
       clone.remove();
       drag.style.opacity = "1";
 
@@ -228,7 +301,8 @@ document.addEventListener("DOMContentLoaded", () => {
         container.appendChild(drag);
 
         // تحديث لون العنصر بناءً على الصندوق الذي تم إسقاطه فيه
-        drag.style.backgroundColor = droppedInBox.getAttribute("data-bg-color");
+        drag.querySelector("p").style.backgroundColor =
+          droppedInBox.getAttribute("data-bg-color");
 
         // تحديث موقع العنصر في localStorage
         updateLocalStorage();
@@ -236,6 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       drag = null;
       clone = null;
+      isDragging = false;
     });
   }
 
