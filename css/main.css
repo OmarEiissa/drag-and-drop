@@ -28,7 +28,6 @@ body {
   flex-direction: column;
   gap: 50px;
   padding-top: 70px;
-  
 }
 
 .inputs {
@@ -59,11 +58,13 @@ h2 {
   border: 1px solid #928cff;
   outline: none;
 }
+
 .data input {
   width: 100%;
 }
+
 .data button {
-  transition: .3s;
+  transition: 0.3s;
   background-color: #928cff;
   color: #fff;
   border: none;
@@ -111,6 +112,16 @@ h2 {
   margin: 5px;
 }
 
+.item-container {
+  display: flex;
+  align-items: center;
+}
+
+.up-btn,
+.down-btn {
+  display: none;
+}
+
 .item {
   color: #fff;
   padding: 10px;
@@ -120,8 +131,9 @@ h2 {
   border-radius: 5px;
   text-align: center;
   width: 100%;
-  max-width: calc(100% - 32px);
+  max-width: calc(100% - 108px);
   outline: none;
+  
 }
 
 .box1 .item {
@@ -144,13 +156,17 @@ h2 {
   width: 20px;
 }
 
+.edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  outline: none;
+}
+
 .item:active {
   transform: scale(0.9);
 }
-
-/* .item-container {
-  display: flex;
-} */
 
 .edit-item-btn {
   background: none;
@@ -161,21 +177,13 @@ h2 {
   transition: color 0.3s;
 }
 
-
 .delete-btn {
   background: none;
   border: none;
   cursor: pointer;
+  font-size: 16px;
   margin-right: 10px;
   transition: color 0.3s;
-}
-
-.edit-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  outline: none;
 }
 
 .edit-input {
@@ -204,6 +212,35 @@ h2 {
 
   .box {
     width: calc(100% - 20px);
+    display: none;
+    max-height: none;
+  }
+
+  .container {
+    max-height: none;
+  }
+
+  .box1 {
+    display: block;
+  }
+
+  .up-btn,
+  .down-btn {
+    display: block;
+    background: none;
+    font-size: 16px;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    flex: 1;
+  }
+
+  .item-container:last-child .up-btn {
+    display: none;
+  }
+
+  .item-container:first-child .down-btn {
+    display: none;
   }
 
   ::-webkit-scrollbar {
@@ -232,8 +269,4 @@ h2 {
   ::-webkit-scrollbar {
     display: none;
   }
-}
-
-.item-container {
-  display: flex;
 }

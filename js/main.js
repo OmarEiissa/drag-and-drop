@@ -73,6 +73,14 @@ document.addEventListener("DOMContentLoaded", () => {
     deleteBtn.className = "delete-btn";
     deleteBtn.innerHTML = "🗑️";
 
+    const up = document.createElement("button");
+    up.className = "up-btn";
+    up.innerHTML = "⬆️";
+
+    const down = document.createElement("button");
+    down.className = "down-btn";
+    down.innerHTML = "⬇️";
+
     deleteBtn.addEventListener("click", () => {
       item.remove();
       updateLocalStorage();
@@ -80,6 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     item.appendChild(deleteBtn);
     item.appendChild(itemText);
+    item.appendChild(down);
+    item.appendChild(up);
     item.appendChild(editBtn);
 
     const targetBox = boxes[boxIndex];
@@ -88,8 +98,8 @@ document.addEventListener("DOMContentLoaded", () => {
     container.appendChild(item);
 
     initializeDragEvents(item);
-    initializeTouchEvents(item);
     initializeItemEditEvents(item);
+    initializeItemMoveEvents(item);
 
     // حفظ العناصر في localStorage
     updateLocalStorage();
@@ -185,135 +195,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function initializeTouchEvents(item) {
-    let initialX, initialY;
-    let drag = null;
-    let clone;
-    let isDragging = false;
-
-    item.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = item.getBoundingClientRect();
-      initialX = touch.clientX - rect.left;
-      initialY = touch.clientY - rect.top;
-
-      // التحقق من الضغط على أزرار التعديل أو الحذف
-      const target = e.target;
-      if (
-        target.classList.contains("edit-item-btn") ||
-        target.classList.contains("delete-btn")
-      ) {
-        isDragging = false; // لا تسحب إذا كانت النقرة على أزرار التعديل أو الحذف
-        // التعامل مع زر التعديل
-        if (target.classList.contains("edit-item-btn")) {
-          initializeItemEditEvents(item);
-        }
-        // التعامل مع زر الحذف
-        if (target.classList.contains("delete-btn")) {
-          item.remove();
-          updateLocalStorage();
-        }
-        return;
-      }
-
-      drag = item;
-      drag.style.opacity = "0.5";
-
-      // إنشاء نسخة عائمة من العنصر المسحوب
-      clone = item.cloneNode(true);
-      clone.style.position = "absolute";
-      clone.style.width = `${item.offsetWidth - 5}px`;
-      clone.style.height = `${item.offsetHeight - 5}px`;
-      clone.style.transform = "scale(0.9)";
-      clone.style.left = `${e.clientX - initialX}px`;
-      clone.style.top = `${e.clientY - initialY}px`;
-      clone.style.pointerEvents = "none";
-      clone.style.opacity = "0.7";
-      clone.style.zIndex = "1000";
-      clone.style.backgroundColor =
-        window.getComputedStyle(item).backgroundColor;
-      document.body.appendChild(clone);
-
-      isDragging = true; // تعيين حالة السحب
-    });
-
-    item.addEventListener("touchmove", (e) => {
-      e.preventDefault();
-      if (!drag || !clone || !isDragging) return;
-      const touch = e.touches[0];
-
-      // تحديث موقع النسخة العائمة
-      clone.style.left = `${touch.clientX - initialX}px`;
-      clone.style.top = `${touch.clientY - initialY}px`;
-
-      // التحقق من مرور العنصر فوق صندوق آخر
-      boxes.forEach((box) => {
-        const boxRect = box.getBoundingClientRect();
-        if (
-          touch.clientX >= boxRect.left &&
-          touch.clientX <= boxRect.right &&
-          touch.clientY >= boxRect.top &&
-          touch.clientY <= boxRect.bottom
-        ) {
-          box.style.backgroundColor = box.getAttribute("data-bg-color");
-          box.querySelector("input").style.backgroundColor =
-            box.getAttribute("data-bg-color");
-          box.style.color = "#fff";
-        } else {
-          box.style.backgroundColor = "#fff";
-          box.querySelector("input").style.backgroundColor = "#fff";
-          box.style.color = "#000";
-        }
-      });
-    });
-
-    item.addEventListener("touchend", (e) => {
-      e.preventDefault();
-      if (!drag || !clone) return;
-      if (!isDragging) return; // لا تقم بالتحريك إذا لم يكن العنصر يتم سحبه
-
-      clone.remove();
-      drag.style.opacity = "1";
-
-      const touch = e.changedTouches[0];
-      let droppedInBox = null;
-
-      boxes.forEach((box) => {
-        const boxRect = box.getBoundingClientRect();
-        if (
-          touch.clientX >= boxRect.left &&
-          touch.clientX <= boxRect.right &&
-          touch.clientY >= boxRect.top &&
-          touch.clientY <= boxRect.bottom
-        ) {
-          droppedInBox = box;
-        }
-
-        // إعادة تعيين ألوان الصناديق
-        box.style.backgroundColor = "#fff";
-        box.querySelector("input").style.backgroundColor = "#fff";
-        box.style.color = "#000";
-      });
-
-      if (droppedInBox) {
-        const container = droppedInBox.querySelector(".container");
-        container.appendChild(drag);
-
-        // تحديث لون العنصر بناءً على الصندوق الذي تم إسقاطه فيه
-        drag.querySelector("p").style.backgroundColor =
-          droppedInBox.getAttribute("data-bg-color");
-
-        // تحديث موقع العنصر في localStorage
-        updateLocalStorage();
-      }
-
-      drag = null;
-      clone = null;
-      isDragging = false;
-    });
-  }
-
   function updateLocalStorage() {
     const allItems = [];
     boxes.forEach((box, boxIndex) => {
@@ -372,4 +253,25 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  function initializeItemMoveEvents(item) {
+    const upButton = item.querySelector(".up-btn");
+    const downButton = item.querySelector(".down-btn");
+
+    upButton.addEventListener("click", () => {
+      const nextItem = item.nextElementSibling;
+      if (nextItem) {
+        item.parentNode.insertBefore(nextItem, item);
+        updateLocalStorage();
+      }
+    });
+
+    downButton.addEventListener("click", () => {
+      const previousItem = item.previousElementSibling;
+      if (previousItem) {
+        item.parentNode.insertBefore(item, previousItem);
+        updateLocalStorage();
+      }
+    });
+  }
 });
