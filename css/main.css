@@ -115,6 +115,7 @@ h2 {
 .item-container {
   display: flex;
   align-items: center;
+  justify-content: space-evenly;
 }
 
 .up-btn,
